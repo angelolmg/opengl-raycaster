@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1617385894 source:c:\users\angel\documents\opengl\learning\raycaster\main.c
+	<GL/gl.h>
+	<GL/glu.h>
+	<GL/glut.h>
+	<stdio.h>
+	<stdbool.h>
+	<math.h>
+
