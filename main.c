@@ -302,6 +302,18 @@ void displayImage(int n_esferas){
     printf("Terminou display");
 }
 
+
+struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GLdouble kd, GLdouble ks, GLdouble nshiny){
+    GLdouble *coords_esf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    coords_esf[0] = x;
+    coords_esf[1] = y;
+    coords_esf[2] = z;
+
+    struct Esfera e = {coords_esf, r, kd, ks, nshiny};
+
+    return e;
+}
+
 ///***********************///
 /// INICIALIZAÇÃO GERAL
 /// CHAMADO UMA ÚNICA VEZ
@@ -311,34 +323,36 @@ void init(void)
 {
     /// INICIALIZANDO ESFERAS
     // Variáveis de configuração
-    int n_esferas = 2;
+    
+    // GLdouble x_esf = 0.0;
+    // GLdouble y_esf = 0.0;
+    // GLdouble z_esf = 30.0;
+    // GLdouble r_esf = 5.0;
+    // GLdouble kd_esf = 1;
+    // GLdouble ks_esf = 1;
+    // GLdouble nshiny_esf = 20;
 
-    GLdouble x_esf = 0.0;
-    GLdouble y_esf = 0.0;
-    GLdouble z_esf = 30.0;
-    GLdouble r_esf = 5.0;
-    GLdouble kd_esf = 1;
-    GLdouble ks_esf = 1;
-    GLdouble nshiny_esf = 20;
+    // GLdouble *coords_esf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    // coords_esf[0] = x_esf;
+    // coords_esf[1] = y_esf;
+    // coords_esf[2] = - z_esf;
+
+    // GLdouble *coords_esf2 = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    // coords_esf2[0] = -5.0;
+    // coords_esf2[1] = -5.0;
+    // coords_esf2[2] = -35.0;
+
+    // struct Esfera e = {coords_esf, r_esf, kd_esf, ks_esf, nshiny_esf};
+    // struct Esfera e2 = {coords_esf2, r_esf, kd_esf, ks_esf, nshiny_esf};
+    
+    int n_esferas = 3;
 
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
-    GLdouble *coords_esf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    coords_esf[0] = x_esf;
-    coords_esf[1] = y_esf;
-    coords_esf[2] = - z_esf;
 
-    GLdouble *coords_esf2 = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    coords_esf2[0] = -5.0;
-    coords_esf2[1] = -5.0;
-    coords_esf2[2] = -35.0;
-
-    struct Esfera e = {coords_esf, r_esf, kd_esf, ks_esf, nshiny_esf};
-    struct Esfera e2 = {coords_esf2, r_esf, kd_esf, ks_esf, nshiny_esf};
+    esferas[0] = constructSphere(0.0, 0.0, -30.0, 5.0, 1.0, 1.0, 20);
+    esferas[1] = constructSphere(-5.0, -5.0, -35.0, 5.0, 1.0, 1.0, 20);
+    esferas[2] = constructSphere(5.0, -5.0, -35.0, 5.0, 1.0, 1.0, 20);
     
-    esferas[0] = e;
-    esferas[1] = e2;
-
-
 
     /// INICIALIZANDO LUZ AMBIENTE
     // Variáveis de configuração
