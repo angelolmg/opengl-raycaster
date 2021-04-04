@@ -188,6 +188,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
     GLdouble zd = direcao_normal[2];
 
     double closest_intersection = -zfar;
+    int sphr_i = 0;
     // printf("closest intersect: %lf \n", closest_intersection);
     for (int i = 0; i < n_esferas; i++){
         GLdouble xc = esferas[i].coords[0];
@@ -215,6 +216,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
             // Verifica se essa raiz é a mais próxima até então, se for armazena ela
             if (t > closest_intersection){
                 closest_intersection = t;
+                sphr_i = i;
             }
         }
     }
@@ -228,7 +230,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
         GLdouble *luz = normalizarVetor(sub_arrays(luzPont[0].coords, superficie, 3), 3);
 
         /// VETOR NORMAL (N) = S - Esfera
-        GLdouble *normal = normalizarVetor(sub_arrays(superficie, esferas[0].coords, 3), 3);
+        GLdouble *normal = normalizarVetor(sub_arrays(superficie, esferas[sphr_i].coords, 3), 3);
 
         /// VETOR REFLETIDO (R) = 2N(N.L) - L
         GLdouble *refletido = sub_arrays(
@@ -246,8 +248,8 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
         RO = dot_product(observador, refletido, 3);
 
         ambiente = luzAmb.Ia * luzAmb.ka;
-        difusa = esferas[0].kd * LN;
-        especular = esferas[0].ks * pow(RO, esferas[0].nshiny);
+        difusa = esferas[sphr_i].kd * LN;
+        especular = esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
 
         GLdouble I = ambiente + luzPont[0].fatt * luzPont[0].IL * (difusa + especular);
 
