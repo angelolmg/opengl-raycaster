@@ -2,12 +2,12 @@
 ***************************************************************
 
 UNIVERSIDADE FEDERAL DO RIO GRANDE DO NORTE (UFRN)
-DEPARTAMENTO DE ENGENHARIA DE COMPUTA��O E AUTOMA��O (DCA)
-DCA0114 - COMPUTA��O GR�FICA - T01 (2020.2 - 35M12)
+DEPARTAMENTO DE ENGENHARIA DE COMPUTAÇÃO E AUTOMAÇÃO (DCA)
+DCA0114 - COMPUTAÇÃO GRÁFICA - T01 (2020.2 - 35M12)
 
-PROF� DR� LUIZ MARCOS GARCIA GONCALVES
+PROF: DR. LUIZ MARCOS GARCIA GONCALVES
 
-GRUPO:  ANGELO LEITE MEDEIROS DE G�ES
+GRUPO:  ANGELO LEITE MEDEIROS DE GOES
         ARIEL DA SILVA ALSINA
         LUIZ PAULO DE CARVALHO ALVES
 
@@ -16,12 +16,14 @@ GRUPO:  ANGELO LEITE MEDEIROS DE G�ES
 ***************************************************************
 
 TODO:
- - GENERALIZAR PARA V�RIAS ESFERAS EM CENA COM DIFERENTES PAR�METROS
- - C�LCULO DA ILUMINA��O PARA OS 3 CANAIS DE CORES
+ - CÁLCULO DA ILUMINAÇÃO PARA OS 3 CANAIS DE CORES
  - ARRUMAR reshape() (atualmente programa trava ao mudar tamanho da janela)
- - (TALVEZ) GENERALIZAR PARA V�RIAS LUZES PONTUAIS
- - (TALVEZ) C�LCULO DIN�MICO DE fatt, POR fatt = 1/d^2, SENDO d A DIST�NCIA ENTRE A LUZ FOCAL E A SUPERF�CIE
- - (TALVEZ) ADICIONAR MOVIMENTO (CONTROLAR POSI��O DA C�MERA 'lookfrom' COM O TECLADO)
+ - (TALVEZ) GENERALIZAR PARA VÁRIAS LUZES PONTUAIS
+ - (TALVEZ) CÁLCULO DINÂMICO DE fatt, POR fatt = 1/d^2, SENDO d A DISTÂNCIA ENTRE A LUZ FOCAL E A SUPERÍCIE
+ - (TALVEZ) ADICIONAR MOVIMENTO (CONTROLAR POSIÇÃO DA CÂMERA 'lookfrom' COM O TECLADO)
+
+DONE:
+ - GENERALIZAR PARA VÁRIAS ESFERAS EM CENA COM DIFERENTES PARÂMETROS
 
 ***************************************************************
 ***************************************************************
@@ -61,10 +63,10 @@ struct LuzAmbiente{
 };
 
 ///***********************///
-/// DECLARA��ES INICIAIS
+/// DECLARAÇÕES INICIAIS
 ///***********************///
 
-GLdouble lumi_xy = -1.0;      /* Lumin�ncia no pixel (x, y) */
+GLdouble lumi_xy = -1.0;      /* Luminância no pixel (x, y) */
 GLdouble x_tela, y_tela;      /* Coordenadas de mundo do pixel viewport(x, y) */
 GLdouble* lf;                 /* lookfrom ou 'origem' */
 struct Esfera *esferas;       /* Lista de esferas na cena*/
@@ -72,15 +74,15 @@ struct LuzPontual *luzPont;   /* Lista de luzes pontuais */
 struct LuzAmbiente luzAmb;
 
 ///***********************///
-/// CONFIGURA��ES GERAIS
+/// CONFIGURAÇÕES GERAIS
 ///***********************///
 
 GLdouble fov = 45.0;
-GLdouble znear = 1.0;   /* Dist�ncia focal */
+GLdouble znear = 1.0;   /* Distância focal */
 GLdouble zfar = 100.0;
 
 ///***********************///
-/// OPERA��ES COM VETORES
+/// OPERAÇÃES COM VETORES
 ///***********************///
 
 GLdouble *normalizarVetor(GLdouble* arr, GLint n){
@@ -166,8 +168,8 @@ GLdouble* screenToWorldCoord(int x, int y){
 }
 
 ///***********************///
-/// CHECA POR INTERSEC��O DO RAIO CASTADO ATRAVES DO PIXEL EM (x,y) COM OBJETOS
-/// CALCULA E RETORNA ILUMINA��O TOTAL NAQUELE PIXEL, OU -1.0, CASO N�O HAJA INTERSEC��O
+/// CHECA POR INTERSECÇÃO DO RAIO CASTADO ATRAVES DO PIXEL EM (x,y) COM OBJETOS
+/// CALCULA E RETORNA ILUMINAÇÃO TOTAL NAQUELE PIXEL, OU -1.0, CASO NÃO HAJA INTERSECÇÃO
 ///***********************///
 
 GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esferas, int n_esferas){
@@ -177,7 +179,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
     GLdouble yo = lookfrom[1];
     GLdouble zo = lookfrom[2];
 
-    /// OBTENDO COORDENADAS DO VETOR DE DIRE��O NORMALIZADO
+    /// OBTENDO COORDENADAS DO VETOR DE DIREÇÃO NORMALIZADO
     GLdouble *direcao = screenToWorldCoord(x, y);
     GLdouble *direcao_normal = normalizarVetor(direcao, 3);
 
@@ -185,7 +187,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
     GLdouble yd = direcao_normal[1];
     GLdouble zd = direcao_normal[2];
 
-    double closest_intersection = zfar+1;
+    double closest_intersection = -zfar;
     // printf("closest intersect: %lf \n", closest_intersection);
     for (int i = 0; i < n_esferas; i++){
         GLdouble xc = esferas[i].coords[0];
@@ -194,7 +196,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
 
         GLdouble r = esferas[i].r;
 
-        /// VALORES DO C�LCULO DA INTERSERC��O
+        /// VALORES DO CÁLCULO DA INTERSERCÇÃO
         double delta;
         double a = 1.0;
         double b = 2 * (xd * (xo - xc) + yd * (yo - yc) + zd * (zo - zc));
@@ -202,7 +204,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
 
         delta = b*b - 4*a*c;
 
-        // Se (delta > 0) existe ra�zes para equa��o, logo, h� intersec��o
+        // Se (delta > 0) existe raízes para equação, logo, há intersecção
         if(delta >= 0){
             double t1, t2, t;
             t1 = (-b + sqrt(delta))/(2*a);
@@ -211,15 +213,15 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
             // Escolhe a menor raiz (mais pr�xima do observador)
             t = (t1 > t2) ? t1 : t2;
             // Verifica se essa raiz é a mais próxima até então, se for armazena ela
-            if (t < closest_intersection){
+            if (t > closest_intersection){
                 closest_intersection = t;
             }
         }
     }
-    // printf("closest intersect: %lf \n", closest_intersection);
-    if (closest_intersection < zfar+1){
+    if (closest_intersection > -zfar){
+        // printf("closest intersect: %lf \n", closest_intersection);
 
-        /// VETOR SUPERFICIE (S) = lookfrom + t * dire��o_normalizada
+        /// VETOR SUPERFICIE (S) = lookfrom + t * dirção_normalizada
         GLdouble *superficie = add_arrays(lookfrom, cnt_product(direcao_normal, closest_intersection, 3), 3);
 
         /// VETOR LUZ (L) = Luz - S
@@ -237,7 +239,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
         /// VETOR OBSERVADOR (O) = lookfrom - S
         GLdouble *observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
 
-        /// C�LCULO DA ILUMINA��O TOTAL
+        /// CÁLCULO DA ILUMINAÇÃO TOTAL
         GLdouble LN, RO, especular, difusa, ambiente;
 
         LN = dot_product(luz, normal, 3);
@@ -260,7 +262,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
 }
 
 ///***********************///
-/// FUN��O QUE DESENHA PIXELS NA TELA
+/// FUNÇÃO QUE DESENHA PIXELS NA TELA
 /// SOMENTE SE A LUMINANCIA DO PIXEL FOR POSITIVA
 ///***********************///
 
@@ -299,14 +301,14 @@ void displayImage(int n_esferas){
 }
 
 ///***********************///
-/// INICIALIZA��O GERAL
-/// CHAMADO UMA �NICA VEZ
+/// INICIALIZAÇÃO GERAL
+/// CHAMADO UMA ÚNICA VEZ
 ///***********************///
 
 void init(void)
 {
     /// INICIALIZANDO ESFERAS
-    // Vari�veis de configura��o
+    // Variáveis de configuração
     int n_esferas = 2;
 
     GLdouble x_esf = 0.0;
@@ -324,9 +326,9 @@ void init(void)
     coords_esf[2] = - z_esf;
 
     GLdouble *coords_esf2 = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    coords_esf2[0] = 0.0;
-    coords_esf2[1] = 0.0;
-    coords_esf2[2] = -40.0;
+    coords_esf2[0] = -5.0;
+    coords_esf2[1] = -5.0;
+    coords_esf2[2] = -35.0;
 
     struct Esfera e = {coords_esf, r_esf, kd_esf, ks_esf, nshiny_esf};
     struct Esfera e2 = {coords_esf2, r_esf, kd_esf, ks_esf, nshiny_esf};
@@ -337,13 +339,13 @@ void init(void)
 
 
     /// INICIALIZANDO LUZ AMBIENTE
-    // Vari�veis de configura��o
+    // Variáveis de configuração
     luzAmb.Ia = 300;
     luzAmb.ka = 0.8;
 
 
     /// INICIALIZANDO LUZES PONTUAIS
-    // Vari�veis de configura��o
+    // Variáveis de configuração
     int n_luzPont = 1;
 
     GLdouble x_lp = -20.0;
@@ -363,7 +365,7 @@ void init(void)
 
 
     /// INICIALIZANDO LOOKFROM
-    // Vari�veis de configura��o
+    // Variáveis de configuração
     lf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
     lf[0] = 0.0;
     lf[1] = 0.0;
@@ -378,7 +380,7 @@ void init(void)
 
 ///***********************///
 /// AJUSTA E REDESENHA O FRAME ATUAL
-/// CASO A JANELA MUDE DE PROPOR��O
+/// CASO A JANELA MUDE DE PROPORÇÃO
 ///***********************///
 
 void reshape (int w, int h)
