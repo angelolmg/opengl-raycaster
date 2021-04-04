@@ -187,7 +187,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
     GLdouble yd = direcao_normal[1];
     GLdouble zd = direcao_normal[2];
 
-    double closest_intersection = -zfar;
+    double closest_intersection = zfar;
     int sphr_i = 0;
     // printf("closest intersect: %lf \n", closest_intersection);
     for (int i = 0; i < n_esferas; i++){
@@ -212,15 +212,15 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
             t2 = (-b - sqrt(delta))/(2*a);
 
             // Escolhe a menor raiz (mais pr�xima do observador)
-            t = (t1 > t2) ? t1 : t2;
+            t = (fabs(t1) < fabs(t2)) ? t1 : t2;
             // Verifica se essa raiz é a mais próxima até então, se for armazena ela
-            if (t > closest_intersection){
+            if (fabs(t) < fabs(closest_intersection)){
                 closest_intersection = t;
                 sphr_i = i;
             }
         }
     }
-    if (closest_intersection > -zfar){
+    if (fabs(closest_intersection) < zfar){
         // printf("closest intersect: %lf \n", closest_intersection);
 
         /// VETOR SUPERFICIE (S) = lookfrom + t * dirção_normalizada
