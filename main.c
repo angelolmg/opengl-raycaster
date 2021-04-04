@@ -2,12 +2,12 @@
 ***************************************************************
 
 UNIVERSIDADE FEDERAL DO RIO GRANDE DO NORTE (UFRN)
-DEPARTAMENTO DE ENGENHARIA DE COMPUTAÇÃO E AUTOMAÇÃO (DCA)
-DCA0114 - COMPUTAÇÃO GRÁFICA - T01 (2020.2 - 35M12)
+DEPARTAMENTO DE ENGENHARIA DE COMPUTAï¿½ï¿½O E AUTOMAï¿½ï¿½O (DCA)
+DCA0114 - COMPUTAï¿½ï¿½O GRï¿½FICA - T01 (2020.2 - 35M12)
 
-PROFº DRº LUIZ MARCOS GARCIA GONCALVES
+PROFï¿½ DRï¿½ LUIZ MARCOS GARCIA GONCALVES
 
-GRUPO:  ANGELO LEITE MEDEIROS DE GÓES
+GRUPO:  ANGELO LEITE MEDEIROS DE Gï¿½ES
         ARIEL DA SILVA ALSINA
         LUIZ PAULO DE CARVALHO ALVES
 
@@ -16,12 +16,12 @@ GRUPO:  ANGELO LEITE MEDEIROS DE GÓES
 ***************************************************************
 
 TODO:
- - GENERALIZAR PARA VÁRIAS ESFERAS EM CENA COM DIFERENTES PARÂMETROS
- - CÁLCULO DA ILUMINAÇÃO PARA OS 3 CANAIS DE CORES
+ - GENERALIZAR PARA Vï¿½RIAS ESFERAS EM CENA COM DIFERENTES PARï¿½METROS
+ - Cï¿½LCULO DA ILUMINAï¿½ï¿½O PARA OS 3 CANAIS DE CORES
  - ARRUMAR reshape() (atualmente programa trava ao mudar tamanho da janela)
- - (TALVEZ) GENERALIZAR PARA VÁRIAS LUZES PONTUAIS
- - (TALVEZ) CÁLCULO DINÂMICO DE fatt, POR fatt = 1/d^2, SENDO d A DISTÂNCIA ENTRE A LUZ FOCAL E A SUPERFÍCIE
- - (TALVEZ) ADICIONAR MOVIMENTO (CONTROLAR POSIÇÃO DA CÂMERA 'lookfrom' COM O TECLADO)
+ - (TALVEZ) GENERALIZAR PARA Vï¿½RIAS LUZES PONTUAIS
+ - (TALVEZ) Cï¿½LCULO DINï¿½MICO DE fatt, POR fatt = 1/d^2, SENDO d A DISTï¿½NCIA ENTRE A LUZ FOCAL E A SUPERFï¿½CIE
+ - (TALVEZ) ADICIONAR MOVIMENTO (CONTROLAR POSIï¿½ï¿½O DA Cï¿½MERA 'lookfrom' COM O TECLADO)
 
 ***************************************************************
 ***************************************************************
@@ -61,10 +61,10 @@ struct LuzAmbiente{
 };
 
 ///***********************///
-/// DECLARAÇÕES INICIAIS
+/// DECLARAï¿½ï¿½ES INICIAIS
 ///***********************///
 
-GLdouble lumi_xy = -1.0;      /* Luminância no pixel (x, y) */
+GLdouble lumi_xy = -1.0;      /* Luminï¿½ncia no pixel (x, y) */
 GLdouble x_tela, y_tela;      /* Coordenadas de mundo do pixel viewport(x, y) */
 GLdouble* lf;                 /* lookfrom ou 'origem' */
 struct Esfera *esferas;       /* Lista de esferas na cena*/
@@ -72,19 +72,19 @@ struct LuzPontual *luzPont;   /* Lista de luzes pontuais */
 struct LuzAmbiente luzAmb;
 
 ///***********************///
-/// CONFIGURAÇÕES GERAIS
+/// CONFIGURAï¿½ï¿½ES GERAIS
 ///***********************///
 
 GLdouble fov = 45.0;
-GLdouble znear = 1.0;   /* Distância focal */
+GLdouble znear = 1.0;   /* Distï¿½ncia focal */
 GLdouble zfar = 100.0;
 
 ///***********************///
-/// OPERAÇÕES COM VETORES
+/// OPERAï¿½ï¿½ES COM VETORES
 ///***********************///
 
 GLdouble *normalizarVetor(GLdouble* arr, GLint n){
-    GLdouble *normal = malloc(sizeof(GLdouble) * n);
+    GLdouble *normal = (GLdouble*) malloc(sizeof(GLdouble) * n);
     GLdouble sum = 0.0;
 
     for(int i = 0; i < n; i++)
@@ -166,24 +166,18 @@ GLdouble* screenToWorldCoord(int x, int y){
 }
 
 ///***********************///
-/// CHECA POR INTERSECÇÃO DO RAIO CASTADO ATRAVES DO PIXEL EM (x,y) COM OBJETOS
-/// CALCULA E RETORNA ILUMINAÇÃO TOTAL NAQUELE PIXEL, OU -1.0, CASO NÃO HAJA INTERSECÇÃO
+/// CHECA POR INTERSECï¿½ï¿½O DO RAIO CASTADO ATRAVES DO PIXEL EM (x,y) COM OBJETOS
+/// CALCULA E RETORNA ILUMINAï¿½ï¿½O TOTAL NAQUELE PIXEL, OU -1.0, CASO Nï¿½O HAJA INTERSECï¿½ï¿½O
 ///***********************///
 
-GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esferas){
+GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esferas, int n_esferas){
 
     /// DESCOMPACTANDO COORDENADAS DE ORIGEM E DE ESFERA
     GLdouble xo = lookfrom[0];
     GLdouble yo = lookfrom[1];
     GLdouble zo = lookfrom[2];
 
-    GLdouble xc = esferas[0].coords[0];
-    GLdouble yc = esferas[0].coords[1];
-    GLdouble zc = esferas[0].coords[2];
-
-    GLdouble r = esferas[0].r;
-
-    /// OBTENDO COORDENADAS DO VETOR DE DIREÇÃO NORMALIZADO
+    /// OBTENDO COORDENADAS DO VETOR DE DIREï¿½ï¿½O NORMALIZADO
     GLdouble *direcao = screenToWorldCoord(x, y);
     GLdouble *direcao_normal = normalizarVetor(direcao, 3);
 
@@ -191,25 +185,42 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
     GLdouble yd = direcao_normal[1];
     GLdouble zd = direcao_normal[2];
 
-    /// VALORES DO CÁLCULO DA INTERSERCÇÃO
-    double delta;
-    double a = 1.0;
-    double b = 2 * (xd * (xo - xc) + yd * (yo - yc) + zd * (zo - zc));
-    double c = (xo - xc)*(xo - xc) + (yo - yc)*(yo - yc) + (zo - zc)*(zo - zc) - r*r;
+    double closest_intersection = zfar+1;
+    // printf("closest intersect: %lf \n", closest_intersection);
+    for (int i = 0; i < n_esferas; i++){
+        GLdouble xc = esferas[i].coords[0];
+        GLdouble yc = esferas[i].coords[1];
+        GLdouble zc = esferas[i].coords[2];
 
-    delta = b*b - 4*a*c;
+        GLdouble r = esferas[i].r;
 
-    // Se (delta > 0) existe raízes para equação, logo, há intersecção
-    if(delta >= 0){
-        double t1, t2, t;
-        t1 = (-b + sqrt(delta))/(2*a);
-        t2 = (-b - sqrt(delta))/(2*a);
+        /// VALORES DO Cï¿½LCULO DA INTERSERCï¿½ï¿½O
+        double delta;
+        double a = 1.0;
+        double b = 2 * (xd * (xo - xc) + yd * (yo - yc) + zd * (zo - zc));
+        double c = (xo - xc)*(xo - xc) + (yo - yc)*(yo - yc) + (zo - zc)*(zo - zc) - r*r;
 
-        // Escolhe a menor raiz (mais próxima do observador)
-        t = (t1 > t2) ? t1 : t2;
+        delta = b*b - 4*a*c;
 
-        /// VETOR SUPERFICIE (S) = lookfrom + t * direção_normalizada
-        GLdouble *superficie = add_arrays(lookfrom, cnt_product(direcao_normal, t, 3), 3);
+        // Se (delta > 0) existe raï¿½zes para equaï¿½ï¿½o, logo, hï¿½ intersecï¿½ï¿½o
+        if(delta >= 0){
+            double t1, t2, t;
+            t1 = (-b + sqrt(delta))/(2*a);
+            t2 = (-b - sqrt(delta))/(2*a);
+
+            // Escolhe a menor raiz (mais prï¿½xima do observador)
+            t = (t1 > t2) ? t1 : t2;
+            // Verifica se essa raiz Ã© a mais prÃ³xima atÃ© entÃ£o, se for armazena ela
+            if (t < closest_intersection){
+                closest_intersection = t;
+            }
+        }
+    }
+    // printf("closest intersect: %lf \n", closest_intersection);
+    if (closest_intersection < zfar+1){
+
+        /// VETOR SUPERFICIE (S) = lookfrom + t * direï¿½ï¿½o_normalizada
+        GLdouble *superficie = add_arrays(lookfrom, cnt_product(direcao_normal, closest_intersection, 3), 3);
 
         /// VETOR LUZ (L) = Luz - S
         GLdouble *luz = normalizarVetor(sub_arrays(luzPont[0].coords, superficie, 3), 3);
@@ -219,14 +230,14 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
 
         /// VETOR REFLETIDO (R) = 2N(N.L) - L
         GLdouble *refletido = sub_arrays(
-                              cnt_product(
-                              cnt_product(normal,
-                              dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
+                                cnt_product(
+                                cnt_product(normal,
+                                dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
 
         /// VETOR OBSERVADOR (O) = lookfrom - S
         GLdouble *observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
 
-        /// CÁLCULO DA ILUMINAÇÃO TOTAL
+        /// Cï¿½LCULO DA ILUMINAï¿½ï¿½O TOTAL
         GLdouble LN, RO, especular, difusa, ambiente;
 
         LN = dot_product(luz, normal, 3);
@@ -243,100 +254,13 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
 
         return I;
     }
-    return -1.0;
-}
-
-///***********************///
-/// FAZ O DISPLAY DO FRAME ATUAL DA TELA CALCULANDO ILUMINAÇÃO
-/// E ATUALIZANDO display() PARA CADA PIXEL DEFINIDO PELO viewport
-///***********************///
-
-void displayImage(){
-
-    GLint viewport[4];
-    glGetIntegerv (GL_VIEWPORT, viewport);
-
-    int i, j;
-    for (i = 0; i <= viewport[2]; i++){         /* viewport[2] = comprimento da tela em pixels */
-        for (j = 0; j <= viewport[3]; j++){     /* viewport[3] = altura da tela em pixels */
-            lumi_xy = calcularIluminacao(i, j, lf, esferas);
-            display();
-        }
+    else{
+        return -1.0;
     }
-    printf("Terminou display");
 }
 
 ///***********************///
-/// INICIALIZAÇÃO GERAL
-/// CHAMADO UMA ÚNICA VEZ
-///***********************///
-
-void init(void)
-{
-    /// INICIALIZANDO ESFERAS
-    // Variáveis de configuração
-    int n_esferas = 1;
-
-    GLdouble x_esf = 10.0;
-    GLdouble y_esf = -5.0;
-    GLdouble z_esf = 20.0;
-    GLdouble r_esf = 5.0;
-    GLdouble kd_esf = 1;
-    GLdouble ks_esf = 1;
-    GLdouble nshiny_esf = 20;
-
-    esferas = malloc(sizeof(*esferas) * n_esferas);
-    GLdouble *coords_esf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    coords_esf[0] = x_esf;
-    coords_esf[1] = y_esf;
-    coords_esf[2] = - z_esf;
-
-    struct Esfera e = {coords_esf, r_esf, kd_esf, ks_esf, nshiny_esf};
-    esferas[0] = e;
-
-
-    /// INICIALIZANDO LUZ AMBIENTE
-    // Variáveis de configuração
-    luzAmb.Ia = 300;
-    luzAmb.ka = 0.8;
-
-
-    /// INICIALIZANDO LUZES PONTUAIS
-    // Variáveis de configuração
-    int n_luzPont = 1;
-
-    GLdouble x_lp = -20.0;
-    GLdouble y_lp = -20.0;
-    GLdouble z_lp = 10.0;
-    GLdouble IL_lp = 500;
-    GLdouble fatt = 1;
-
-    luzPont = malloc(sizeof(*luzPont) * n_luzPont);
-    GLdouble *coords_lp = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    coords_lp[0] = x_lp;
-    coords_lp[1] = y_lp;
-    coords_lp[2] = - z_lp;
-
-    struct LuzPontual lp = {coords_lp, IL_lp, fatt};
-    luzPont[0] = lp;
-
-
-    /// INICIALIZANDO LOOKFROM
-    // Variáveis de configuração
-    lf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    lf[0] = 0.0;
-    lf[1] = 0.0;
-    lf[2] = 0.0;
-
-    /// DEFININDO TAMANHO DO PIXEL DE DESENHO
-    glPointSize(1);
-
-    /// DESENHAR FRAME ATUAL
-    displayImage();
-}
-
-///***********************///
-/// FUNÇÃO QUE DESENHA PIXELS NA TELA
+/// FUNï¿½ï¿½O QUE DESENHA PIXELS NA TELA
 /// SOMENTE SE A LUMINANCIA DO PIXEL FOR POSITIVA
 ///***********************///
 
@@ -355,8 +279,106 @@ void display(void)
 }
 
 ///***********************///
+/// FAZ O DISPLAY DO FRAME ATUAL DA TELA CALCULANDO ILUMINAï¿½ï¿½O
+/// E ATUALIZANDO display() PARA CADA PIXEL DEFINIDO PELO viewport
+///***********************///
+
+void displayImage(int n_esferas){
+
+    GLint viewport[4];
+    glGetIntegerv (GL_VIEWPORT, viewport);
+
+    int i, j;
+    for (i = 0; i <= viewport[2]; i++){         /* viewport[2] = comprimento da tela em pixels */
+        for (j = 0; j <= viewport[3]; j++){     /* viewport[3] = altura da tela em pixels */
+            lumi_xy = calcularIluminacao(i, j, lf, esferas, n_esferas);
+            display();
+        }
+    }
+    printf("Terminou display");
+}
+
+///***********************///
+/// INICIALIZAï¿½ï¿½O GERAL
+/// CHAMADO UMA ï¿½NICA VEZ
+///***********************///
+
+void init(void)
+{
+    /// INICIALIZANDO ESFERAS
+    // Variï¿½veis de configuraï¿½ï¿½o
+    int n_esferas = 2;
+
+    GLdouble x_esf = 0.0;
+    GLdouble y_esf = 0.0;
+    GLdouble z_esf = 30.0;
+    GLdouble r_esf = 5.0;
+    GLdouble kd_esf = 1;
+    GLdouble ks_esf = 1;
+    GLdouble nshiny_esf = 20;
+
+    esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
+    GLdouble *coords_esf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    coords_esf[0] = x_esf;
+    coords_esf[1] = y_esf;
+    coords_esf[2] = - z_esf;
+
+    GLdouble *coords_esf2 = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    coords_esf2[0] = 0.0;
+    coords_esf2[1] = 0.0;
+    coords_esf2[2] = -40.0;
+
+    struct Esfera e = {coords_esf, r_esf, kd_esf, ks_esf, nshiny_esf};
+    struct Esfera e2 = {coords_esf2, r_esf, kd_esf, ks_esf, nshiny_esf};
+    
+    esferas[0] = e;
+    esferas[1] = e2;
+
+
+
+    /// INICIALIZANDO LUZ AMBIENTE
+    // Variï¿½veis de configuraï¿½ï¿½o
+    luzAmb.Ia = 300;
+    luzAmb.ka = 0.8;
+
+
+    /// INICIALIZANDO LUZES PONTUAIS
+    // Variï¿½veis de configuraï¿½ï¿½o
+    int n_luzPont = 1;
+
+    GLdouble x_lp = -20.0;
+    GLdouble y_lp = -20.0;
+    GLdouble z_lp = 10.0;
+    GLdouble IL_lp = 500;
+    GLdouble fatt = 1;
+
+    luzPont = (struct LuzPontual*) malloc(sizeof(*luzPont) * n_luzPont);
+    GLdouble *coords_lp = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    coords_lp[0] = x_lp;
+    coords_lp[1] = y_lp;
+    coords_lp[2] = - z_lp;
+
+    struct LuzPontual lp = {coords_lp, IL_lp, fatt};
+    luzPont[0] = lp;
+
+
+    /// INICIALIZANDO LOOKFROM
+    // Variï¿½veis de configuraï¿½ï¿½o
+    lf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    lf[0] = 0.0;
+    lf[1] = 0.0;
+    lf[2] = 0.0;
+
+    /// DEFININDO TAMANHO DO PIXEL DE DESENHO
+    glPointSize(1);
+
+    /// DESENHAR FRAME ATUAL
+    displayImage(n_esferas);
+}
+
+///***********************///
 /// AJUSTA E REDESENHA O FRAME ATUAL
-/// CASO A JANELA MUDE DE PROPORÇÃO
+/// CASO A JANELA MUDE DE PROPORï¿½ï¿½O
 ///***********************///
 
 void reshape (int w, int h)
