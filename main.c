@@ -172,7 +172,7 @@ GLdouble* screenToWorldCoord(int x, int y){
 /// CALCULA E RETORNA ILUMINAÇÃO TOTAL NAQUELE PIXEL, OU -1.0, CASO NÃO HAJA INTERSECÇÃO
 ///***********************///
 
-GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esferas, int n_esferas){
+GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int n_luzes){
 
     /// DESCOMPACTANDO COORDENADAS DE ORIGEM E DE ESFERA
     GLdouble xo = lookfrom[0];
@@ -221,40 +221,48 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, struct Esfera* esf
         }
     }
     if (fabs(closest_intersection) < zfar){
-        // printf("closest intersect: %lf \n", closest_intersection);
+        GLdouble ambiente;
+        ambiente = luzAmb.Ia * luzAmb.ka;
 
         /// VETOR SUPERFICIE (S) = lookfrom + t * dirção_normalizada
         GLdouble *superficie = add_arrays(lookfrom, cnt_product(direcao_normal, closest_intersection, 3), 3);
 
-        /// VETOR LUZ (L) = Luz - S
-        GLdouble *luz = normalizarVetor(sub_arrays(luzPont[0].coords, superficie, 3), 3);
-
         /// VETOR NORMAL (N) = S - Esfera
         GLdouble *normal = normalizarVetor(sub_arrays(superficie, esferas[sphr_i].coords, 3), 3);
-
-        /// VETOR REFLETIDO (R) = 2N(N.L) - L
-        GLdouble *refletido = sub_arrays(
-                                cnt_product(
-                                cnt_product(normal,
-                                dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
-
+        
         /// VETOR OBSERVADOR (O) = lookfrom - S
         GLdouble *observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
 
-        /// CÁLCULO DA ILUMINAÇÃO TOTAL
-        GLdouble LN, RO, especular, difusa, ambiente;
+        GLdouble I = 0.0;
+        GLdouble ilumAcumuladaLuzPont = 0.0;
 
-        LN = dot_product(luz, normal, 3);
-        RO = dot_product(observador, refletido, 3);
+        for (int i = 0; i < n_luzes; i++){
+        
+            /// VETOR LUZ (L) = Luz - S
+            GLdouble *luz = normalizarVetor(sub_arrays(luzPont[i].coords, superficie, 3), 3);
 
-        ambiente = luzAmb.Ia * luzAmb.ka;
-        difusa = esferas[sphr_i].kd * LN;
-        especular = esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+            /// VETOR REFLETIDO (R) = 2N(N.L) - L
+            GLdouble *refletido = sub_arrays(
+                                    cnt_product(
+                                    cnt_product(normal,
+                                    dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
 
-        GLdouble I = ambiente + luzPont[0].fatt * luzPont[0].IL * (difusa + especular);
+            /// CÁLCULO DA ILUMINAÇÃO TOTAL
+            GLdouble LN, RO, especular, difusa;
+
+            LN = dot_product(luz, normal, 3);
+            RO = dot_product(observador, refletido, 3);
+
+            difusa = esferas[sphr_i].kd * LN;
+            especular = esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+
+            I += ambiente + luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
+            
+            ilumAcumuladaLuzPont += luzPont[i].IL;
+        }
 
         /// REDUZIR PARA VALOR [0, 1]
-        I = I / (2 * luzPont[0].IL + luzAmb.Ia);
+        I = I / (2 * ilumAcumuladaLuzPont + luzAmb.Ia);
 
         return I;
     }
@@ -287,7 +295,7 @@ void display(void)
 /// E ATUALIZANDO display() PARA CADA PIXEL DEFINIDO PELO viewport
 ///***********************///
 
-void displayImage(int n_esferas){
+void displayImage(int n_esferas, int n_luzes){
 
     GLint viewport[4];
     glGetIntegerv (GL_VIEWPORT, viewport);
@@ -295,7 +303,7 @@ void displayImage(int n_esferas){
     int i, j;
     for (i = 0; i <= viewport[2]; i++){         /* viewport[2] = comprimento da tela em pixels */
         for (j = 0; j <= viewport[3]; j++){     /* viewport[3] = altura da tela em pixels */
-            lumi_xy = calcularIluminacao(i, j, lf, esferas, n_esferas);
+            lumi_xy = calcularIluminacao(i, j, lf, n_esferas, n_luzes);
             display();
         }
     }
@@ -314,6 +322,17 @@ struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GL
     return e;
 }
 
+struct LuzPontual constructLight(GLdouble x, GLdouble y, GLdouble z, GLdouble IL_lp, GLdouble fatt){
+    GLdouble *coords_lp = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    coords_lp[0] = x;
+    coords_lp[1] = y;
+    coords_lp[2] = z;
+
+    struct LuzPontual lp = {coords_lp, IL_lp, fatt};
+    
+    return lp;
+}
+
 ///***********************///
 /// INICIALIZAÇÃO GERAL
 /// CHAMADO UMA ÚNICA VEZ
@@ -324,27 +343,6 @@ void init(void)
     /// INICIALIZANDO ESFERAS
     // Variáveis de configuração
     
-    // GLdouble x_esf = 0.0;
-    // GLdouble y_esf = 0.0;
-    // GLdouble z_esf = 30.0;
-    // GLdouble r_esf = 5.0;
-    // GLdouble kd_esf = 1;
-    // GLdouble ks_esf = 1;
-    // GLdouble nshiny_esf = 20;
-
-    // GLdouble *coords_esf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    // coords_esf[0] = x_esf;
-    // coords_esf[1] = y_esf;
-    // coords_esf[2] = - z_esf;
-
-    // GLdouble *coords_esf2 = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    // coords_esf2[0] = -5.0;
-    // coords_esf2[1] = -5.0;
-    // coords_esf2[2] = -35.0;
-
-    // struct Esfera e = {coords_esf, r_esf, kd_esf, ks_esf, nshiny_esf};
-    // struct Esfera e2 = {coords_esf2, r_esf, kd_esf, ks_esf, nshiny_esf};
-    
     int n_esferas = 3;
 
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
@@ -352,7 +350,7 @@ void init(void)
     esferas[0] = constructSphere(0.0, 0.0, -30.0, 5.0, 1.0, 1.0, 20);
     esferas[1] = constructSphere(-5.0, -5.0, -35.0, 5.0, 1.0, 1.0, 20);
     esferas[2] = constructSphere(5.0, -5.0, -35.0, 5.0, 1.0, 1.0, 20);
-    
+
 
     /// INICIALIZANDO LUZ AMBIENTE
     // Variáveis de configuração
@@ -362,22 +360,13 @@ void init(void)
 
     /// INICIALIZANDO LUZES PONTUAIS
     // Variáveis de configuração
-    int n_luzPont = 1;
 
-    GLdouble x_lp = -20.0;
-    GLdouble y_lp = -20.0;
-    GLdouble z_lp = 10.0;
-    GLdouble IL_lp = 500;
-    GLdouble fatt = 1;
+    int n_luzPont = 2;
 
     luzPont = (struct LuzPontual*) malloc(sizeof(*luzPont) * n_luzPont);
-    GLdouble *coords_lp = (GLdouble*)malloc(sizeof(GLdouble) * 3);
-    coords_lp[0] = x_lp;
-    coords_lp[1] = y_lp;
-    coords_lp[2] = - z_lp;
 
-    struct LuzPontual lp = {coords_lp, IL_lp, fatt};
-    luzPont[0] = lp;
+    luzPont[0] = constructLight(-20.0, -20.0, -20.0, 500, 1);
+    luzPont[1] = constructLight(20.0, -20.0, -20.0, 500, 1);
 
 
     /// INICIALIZANDO LOOKFROM
@@ -391,7 +380,7 @@ void init(void)
     glPointSize(1);
 
     /// DESENHAR FRAME ATUAL
-    displayImage(n_esferas);
+    displayImage(n_esferas, n_luzPont);
 }
 
 ///***********************///

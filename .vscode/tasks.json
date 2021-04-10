@@ -9,7 +9,12 @@
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/${fileBasenameNoExtension}",
+                "-lm",
+                "-ldl",
+                "-lGL",
+                "-lGLU",
+                "-lglut"
             ],
             "options": {
                 "cwd": "/usr/bin"
