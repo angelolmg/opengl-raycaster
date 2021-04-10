@@ -221,10 +221,11 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
         }
     }
     if (fabs(closest_intersection) < zfar){
-        GLdouble ambiente;
+        GLdouble ambiente, new_fatt;
         ambiente = luzAmb.Ia * luzAmb.ka;
+        new_fatt = 1.0 / pow(closest_intersection, 2);
 
-        /// VETOR SUPERFICIE (S) = lookfrom + t * dirção_normalizada
+        /// VETOR SUPERFICIE (S) = lookfrom + distance * direção_normalizada
         GLdouble *superficie = add_arrays(lookfrom, cnt_product(direcao_normal, closest_intersection, 3), 3);
 
         /// VETOR NORMAL (N) = S - Esfera
@@ -233,7 +234,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
         /// VETOR OBSERVADOR (O) = lookfrom - S
         GLdouble *observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
 
-        GLdouble I = 0.0;
+        GLdouble I = ambiente;
         GLdouble ilumAcumuladaLuzPont = 0.0;
 
         for (int i = 0; i < n_luzes; i++){
@@ -248,21 +249,26 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
                                     dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
 
             /// CÁLCULO DA ILUMINAÇÃO TOTAL
-            GLdouble LN, RO, especular, difusa;
+            GLdouble LN, RO, especular=0, difusa;
 
             LN = dot_product(luz, normal, 3);
             RO = dot_product(observador, refletido, 3);
 
             difusa = esferas[sphr_i].kd * LN;
-            especular = esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+            if(RO > 0){
+                especular = esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+            }
 
-            I += ambiente + luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
-            
-            ilumAcumuladaLuzPont += luzPont[i].IL;
+            I += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
+
+            // if(ilumAcumuladaLuzPont < luzPont[i].IL){ 
+            //     ilumAcumuladaLuzPont = luzPont[i].IL; 
+            // }
+            // ilumAcumuladaLuzPont += luzPont[i].IL;
         }
 
         /// REDUZIR PARA VALOR [0, 1]
-        I = I / (2 * ilumAcumuladaLuzPont + luzAmb.Ia);
+        I = I / (2000);
 
         return I;
     }
@@ -348,8 +354,8 @@ void init(void)
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
 
     esferas[0] = constructSphere(0.0, 0.0, -30.0, 5.0, 1.0, 1.0, 20);
-    esferas[1] = constructSphere(-5.0, -5.0, -35.0, 5.0, 1.0, 1.0, 20);
     esferas[2] = constructSphere(5.0, -5.0, -35.0, 5.0, 1.0, 1.0, 20);
+    esferas[1] = constructSphere(-5.0, -5.0, -35.0, 5.0, 1.0, 1.0, 20);
 
 
     /// INICIALIZANDO LUZ AMBIENTE
@@ -361,12 +367,13 @@ void init(void)
     /// INICIALIZANDO LUZES PONTUAIS
     // Variáveis de configuração
 
-    int n_luzPont = 2;
+    int n_luzPont = 3;
 
     luzPont = (struct LuzPontual*) malloc(sizeof(*luzPont) * n_luzPont);
 
-    luzPont[0] = constructLight(-20.0, -20.0, -20.0, 500, 1);
-    luzPont[1] = constructLight(20.0, -20.0, -20.0, 500, 1);
+    luzPont[0] = constructLight(-20.0, -20.0, -10.0, 1500, 1);
+    luzPont[1] = constructLight(20.0, -20.0, -10.0, 600, 1);
+    luzPont[2] = constructLight(0.0, 40.0, -10.0, 300, 1);
 
 
     /// INICIALIZANDO LOOKFROM
