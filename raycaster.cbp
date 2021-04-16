@@ -38,6 +38,7 @@
 			<Add library="opengl32" />
 			<Add library="glu32" />
 			<Add library="gdi32" />
+			<Add library="freeglut" />
 		</Linker>
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
