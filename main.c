@@ -404,9 +404,6 @@ void init(void)
 
     /// DEFININDO TAMANHO DO PIXEL DE DESENHO
     glPointSize(1);
-
-    /// DESENHAR FRAME ATUAL
-    displayImage();
 }
 
 ///***********************///
