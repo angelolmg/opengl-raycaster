@@ -276,6 +276,24 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
 }
 
 ///***********************///
+/// AJUSTA E REDESENHA O FRAME ATUAL
+/// CASO A JANELA MUDE DE PROPORÇÃO
+///***********************///
+
+void reshape (int w, int h)
+{
+    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
+    glMatrixMode (GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective (fov, (GLfloat) w/(GLfloat) h, znear, zfar);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    gluLookAt (0.0, 0.0, znear, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0);
+    //displayImage(n_esferas, n_luzPont);
+}
+
+///***********************///
 /// FUNÇÃO QUE DESENHA PIXELS NA TELA
 /// SOMENTE SE A LUMINANCIA DO PIXEL FOR POSITIVA
 ///***********************///
@@ -298,7 +316,7 @@ void display(void)
 /// E ATUALIZANDO display() PARA CADA PIXEL DEFINIDO PELO viewport
 ///***********************///
 
-void displayImage(int n_esferas, int n_luzes){
+void displayImage(void){
 
     GLint viewport[4];
     glGetIntegerv (GL_VIEWPORT, viewport);
@@ -308,7 +326,7 @@ void displayImage(int n_esferas, int n_luzes){
     int i, j;
     for (i = 0; i <= viewport[2]; i++){         /* viewport[2] = comprimento da tela em pixels */
         for (j = 0; j <= viewport[3]; j++){     /* viewport[3] = altura da tela em pixels */
-            lumi_xy = calcularIluminacao(i, j, lf, n_esferas, n_luzes);
+            lumi_xy = calcularIluminacao(i, j, lf, n_esferas, n_luzPont);
             display();
         }
     }
@@ -388,25 +406,7 @@ void init(void)
     glPointSize(1);
 
     /// DESENHAR FRAME ATUAL
-    displayImage(n_esferas, n_luzPont);
-}
-
-///***********************///
-/// AJUSTA E REDESENHA O FRAME ATUAL
-/// CASO A JANELA MUDE DE PROPORÇÃO
-///***********************///
-
-void reshape (int w, int h)
-{
-    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
-    glMatrixMode (GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective (fov, (GLfloat) w/(GLfloat) h, znear, zfar);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    gluLookAt (0.0, 0.0, znear, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0);
-    //displayImage(n_esferas, n_luzPont);
+    displayImage();
 }
 
 ///***********************///
@@ -416,31 +416,31 @@ void keyboard (unsigned char key, int x, int y)
 {
     switch (key) {
         case 'n':
-            displayImage(n_esferas, n_luzPont);
+            displayImage();
             break;
         case 'w':
             lf[2] -= stepSize;
-            displayImage(n_esferas, n_luzPont);
+            displayImage();
             break;
         case 'a':
             lf[0] += stepSize;
-            displayImage(n_esferas, n_luzPont);
+            displayImage();
             break;
         case 's':
             lf[2] += stepSize;
-            displayImage(n_esferas, n_luzPont);
+            displayImage();
             break;
         case 'd':
             lf[0] -= stepSize;
-            displayImage(n_esferas, n_luzPont);
+            displayImage();
             break;
         case 'q':
             lf[1] -= stepSize;
-            displayImage(n_esferas, n_luzPont);
+            displayImage();
             break;
         case 'e':
             lf[1] += stepSize;
-            displayImage(n_esferas, n_luzPont);
+            displayImage();
             break;
 
         default:
@@ -456,7 +456,7 @@ int main(int argc, char** argv)
     glutInitWindowPosition (100, 100);
     glutCreateWindow (argv[0]);
     init ();
-    glutDisplayFunc(display);
+    glutDisplayFunc(displayImage);
     //glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
 
