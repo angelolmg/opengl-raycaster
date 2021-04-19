@@ -61,7 +61,7 @@ struct LuzAmbiente{
 /// DECLARAÇÕES INICIAIS
 ///***********************///
 
-GLdouble lumi_xy = -1.0;      /* Luminância no pixel (x, y) */
+GLdouble* lumi_xy;      /* Luminância no pixel (x, y) */
 GLdouble x_tela, y_tela;      /* Coordenadas de mundo do pixel viewport(x, y) */
 GLdouble* lf;                 /* lookfrom ou 'origem' */
 struct Esfera *esferas;       /* Lista de esferas na cena*/
@@ -169,7 +169,7 @@ GLdouble* screenToWorldCoord(int x, int y){
 /// CALCULA E RETORNA ILUMINAÇÃO TOTAL NAQUELE PIXEL, OU -1.0, CASO NÃO HAJA INTERSECÇÃO
 ///***********************///
 
-GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int n_luzes){
+GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int n_luzes){
 
     /// DESCOMPACTANDO COORDENADAS DE ORIGEM E DE ESFERA
     GLdouble xo = lookfrom[0];
@@ -233,11 +233,15 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
         /// VETOR OBSERVADOR (O) = lookfrom - S
         GLdouble* observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
 
-        GLdouble I = ambiente;
+        // três canais: R, G e B
+        GLdouble* I = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+        I[0] = ambiente;
+        I[1] = ambiente;
+        I[2] = ambiente;
+
         GLdouble ilumAcumuladaLuzPont = 0.0;
 
         for (int i = 0; i < n_luzes; i++){
-
             /// VETOR LUZ (L) = Luz - S
             GLdouble* luz = normalizarVetor(sub_arrays(luzPont[i].coords, superficie, 3), 3);
 
@@ -258,21 +262,32 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
                 especular = esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
             }
 
-            I += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
-
+            I[0] += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
+            I[1] += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
+            I[2] += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
             // if(ilumAcumuladaLuzPont < luzPont[i].IL){
             //     ilumAcumuladaLuzPont = luzPont[i].IL;
             // }
             // ilumAcumuladaLuzPont += luzPont[i].IL;
         }
+        // cores da esfera mais à frente (a que representa o pixel)
+        GLdouble RED = esferas[sphr_i].cor_esfera[0] / 255;
+        GLdouble GREEN = esferas[sphr_i].cor_esfera[1] / 255;
+        GLdouble BLUE = esferas[sphr_i].cor_esfera[2] / 255;
 
-        /// REDUZIR PARA VALOR [0, 1]
-        I = I / (2000);
+        /// REDUZIR PARA VALOR [0, 1] e depois multiplica pelo fator da cor
+        I[0] = RED * (I[0] / (2000));
+        I[1] = GREEN * (I[1] / (2000));
+        I[2] = BLUE * (I[2] / (2000));
 
         return I;
-    }
-    else {
-        return -1.0;
+    } else {
+        GLdouble* I = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+        I[0] = -1.0;
+        I[1] = -1.0;
+        I[2] = -1.0;
+        
+        return I;
     }
 }
 
@@ -313,25 +328,27 @@ void display(void){
         for (j = 0; j <= viewport[3]; j++){     /* viewport[3] = altura da tela em pixels */
             lumi_xy = calcularIluminacao(i, j, lf, n_esferas, n_luzPont);
             
-            if(lumi_xy > 0){
+            if(lumi_xy[0] > 0){
                 glBegin(GL_POINTS);
-                    glColor3f(lumi_xy, lumi_xy, lumi_xy);   /* Ajusta cor do pixel em escala cinza */
+                    glColor3d(lumi_xy[0], lumi_xy[1], lumi_xy[2]);   /* Ajusta cor do pixel em escala cinza */
                     glVertex2d(x_tela, y_tela);             /* Desenha um ponto na cor definida em (x_tela, y_tela)*/
                 glEnd();
-
-                lumi_xy = -1.0;                             /* Reseta luminancia para -1.0*/
+                
+                /* Reseta luminancia para -1.0*/
+                lumi_xy[0] = -1.0;                             
+                lumi_xy[1] = -1.0;                             
+                lumi_xy[2] = -1.0;                             
             }
         }
         // somente liberamos o buffer quando TODOS os pixeis forem calculados.
         glFlush ();
     }
 
-
     printf("Terminou display\n");
 }
 
 
-struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GLdouble kd, GLdouble ks, GLdouble nshiny, GLfloat color_RED, GLfloat color_GREEN, GLfloat color_BLUE){
+struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GLdouble kd, GLdouble ks, GLdouble nshiny, GLdouble color_RED, GLdouble color_GREEN, GLdouble color_BLUE){
     GLdouble* coords_esf = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     coords_esf[0] = x;
     coords_esf[1] = y;
@@ -364,17 +381,18 @@ struct LuzPontual constructLight(GLdouble x, GLdouble y, GLdouble z, GLdouble IL
 ///***********************///
 
 void init(void)
-{
+{   
+    // especificando qual cor é que glClear(GL_COLOR_BUFFER_BIT) vai utilizar
+    glClearColor (0.0, 0.0, 0.0, 0.0);
+    
     /// INICIALIZANDO ESFERAS
     // Variáveis de configuração
-
     n_esferas = 3;
 
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
-
-    esferas[0] = constructSphere(0.0, 10.0, -60.0, 3.0, 1.0, 1.0, 30, 255.0, 255.0, 255.0);
-    esferas[1] = constructSphere(-10.0, -5.0, -50.0, 8.0, 1.0, 1.0, 30, 255.0, 255.0, 255.0);
-    esferas[2] = constructSphere(10.0, 5.0, -40.0, 5.0, 1.0, 1.0, 30,  255.0, 255.0, 255.0);
+    esferas[0] = constructSphere(0.0, 10.0, -60.0, 3.0, 1.0, 1.0, 30, 255.0, 25.0, 0.0);
+    esferas[1] = constructSphere(-10.0, -5.0, -50.0, 8.0, 1.0, 1.0, 30, 25.0, 255.0, 135.0);
+    esferas[2] = constructSphere(10.0, 5.0, -40.0, 5.0, 1.0, 1.0, 30,  46.0, 0.0, 255.0);
 
 
 
@@ -402,6 +420,13 @@ void init(void)
     lf[0] = 0.0;
     lf[1] = 0.0;
     lf[2] = 10.0;
+
+    // INICIALIZANDO O VETOR DE LUMINÂNCIAS
+    // Variáveis de configuração
+    lumi_xy = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+    lumi_xy[0] = -1.0;
+    lumi_xy[1] = -1.0;
+    lumi_xy[2] = -1.0;
 
     /// DEFININDO TAMANHO DO PIXEL DE DESENHO
     glPointSize(1);
