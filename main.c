@@ -39,6 +39,7 @@ TODO:
 
 struct Esfera{
     GLdouble* coords;
+    GLdouble* cor_esfera;    // tamanho 3: R,G,B
     GLdouble r;
     GLdouble kd;
     GLdouble ks;
@@ -82,7 +83,7 @@ GLdouble stepSize = 10.0;
 ///***********************///
 
 GLdouble *normalizarVetor(GLdouble* arr, GLint n){
-    GLdouble *normal = (GLdouble*) malloc(sizeof(GLdouble) * n);
+    GLdouble* normal = (GLdouble*) malloc(sizeof(GLdouble) * n);
     GLdouble sum = 0.0;
 
     for(int i = 0; i < n; i++)
@@ -106,7 +107,7 @@ GLdouble dot_product(GLdouble* v, GLdouble* u, GLint n)
 
 GLdouble* cnt_product(GLdouble* v, GLdouble c, GLint n)
 {
-    GLdouble *result = (GLdouble*)malloc(sizeof(GLdouble) * n);
+    GLdouble* result = (GLdouble*) malloc(sizeof(GLdouble) * n);
     for (int i = 0; i < n; i++)
         result[i] = c * v[i];
     return result;
@@ -114,7 +115,7 @@ GLdouble* cnt_product(GLdouble* v, GLdouble c, GLint n)
 
 GLdouble* sub_arrays(GLdouble* v, GLdouble* u, GLint n)
 {
-    GLdouble *result = (GLdouble*)malloc(sizeof(GLdouble) * n);
+    GLdouble* result = (GLdouble*) malloc(sizeof(GLdouble) * n);
     for (int i = 0; i < n; i++)
         result[i] = v[i] - u[i];
     return result;
@@ -122,7 +123,7 @@ GLdouble* sub_arrays(GLdouble* v, GLdouble* u, GLint n)
 
 GLdouble* add_arrays(GLdouble* v, GLdouble* u, GLint n)
 {
-    GLdouble *result = (GLdouble*)malloc(sizeof(GLdouble) * n);
+    GLdouble* result = (GLdouble*) malloc(sizeof(GLdouble) * n);
     for (int i = 0; i < n; i++)
         result[i] = v[i] + u[i];
     return result;
@@ -139,7 +140,7 @@ GLdouble* screenToWorldCoord(int x, int y){
     GLdouble mvmatrix[16], projmatrix[16];
     GLint realy;            /*  OpenGL y coordinate position  */
     GLdouble wx, wy, wz;    /*  returned world x, y, z coords  */
-    GLdouble *temp = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+    GLdouble* temp = (GLdouble*) malloc(sizeof(GLdouble) * 3);
 
     glGetIntegerv (GL_VIEWPORT, viewport);
     glGetDoublev (GL_MODELVIEW_MATRIX, mvmatrix);
@@ -176,8 +177,8 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
     GLdouble zo = lookfrom[2];
 
     /// OBTENDO COORDENADAS DO VETOR DE DIREÇÃO NORMALIZADO
-    GLdouble *direcao = screenToWorldCoord(x, y);
-    GLdouble *direcao_normal = normalizarVetor(direcao, 3);
+    GLdouble* direcao = screenToWorldCoord(x, y);
+    GLdouble* direcao_normal = normalizarVetor(direcao, 3);
 
     GLdouble xd = direcao_normal[0];
     GLdouble yd = direcao_normal[1];
@@ -208,7 +209,7 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
             t1 = (-b + sqrt(delta))/(2*a);
             t2 = (-b - sqrt(delta))/(2*a);
 
-            // Escolhe a menor raiz (mais pr�xima do observador)
+            // Escolhe a menor raiz (mais próxima do observador)
             t = (fabs(t1) < fabs(t2)) ? t1 : t2;
             // Verifica se essa raiz é a mais próxima até então, se for armazena ela
             if (fabs(t) < fabs(closest_intersection)){
@@ -224,13 +225,13 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
         new_fatt = 1.0 / pow(closest_intersection, 2);
 
         /// VETOR SUPERFICIE (S) = lookfrom + distance * direção_normalizada
-        GLdouble *superficie = add_arrays(lookfrom, cnt_product(direcao_normal, closest_intersection, 3), 3);
+        GLdouble* superficie = add_arrays(lookfrom, cnt_product(direcao_normal, closest_intersection, 3), 3);
 
         /// VETOR NORMAL (N) = S - Esfera
-        GLdouble *normal = normalizarVetor(sub_arrays(superficie, esferas[sphr_i].coords, 3), 3);
+        GLdouble* normal = normalizarVetor(sub_arrays(superficie, esferas[sphr_i].coords, 3), 3);
 
         /// VETOR OBSERVADOR (O) = lookfrom - S
-        GLdouble *observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
+        GLdouble* observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
 
         GLdouble I = ambiente;
         GLdouble ilumAcumuladaLuzPont = 0.0;
@@ -238,10 +239,10 @@ GLdouble calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int
         for (int i = 0; i < n_luzes; i++){
 
             /// VETOR LUZ (L) = Luz - S
-            GLdouble *luz = normalizarVetor(sub_arrays(luzPont[i].coords, superficie, 3), 3);
+            GLdouble* luz = normalizarVetor(sub_arrays(luzPont[i].coords, superficie, 3), 3);
 
             /// VETOR REFLETIDO (R) = 2N(N.L) - L
-            GLdouble *refletido = sub_arrays(
+            GLdouble* refletido = sub_arrays(
                                     cnt_product(
                                     cnt_product(normal,
                                     dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
@@ -290,33 +291,17 @@ void reshape (int w, int h)
     glLoadIdentity();
 
     gluLookAt (0.0, 0.0, znear, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0);
-    //displayImage(n_esferas, n_luzPont);
+    //display(n_esferas, n_luzPont);
 }
 
 ///***********************///
 /// FUNÇÃO QUE DESENHA PIXELS NA TELA
 /// SOMENTE SE A LUMINANCIA DO PIXEL FOR POSITIVA
-///***********************///
-
-void display(void)
-{
-    if(lumi_xy > 0){
-        glBegin(GL_POINTS);
-            glColor3f(lumi_xy, lumi_xy, lumi_xy);   /* Ajusta cor do pixel em escala cinza */
-            glVertex2d(x_tela, y_tela);             /* Desenha um ponto na cor definida em (x_tela, y_tela)*/
-        glEnd();
-
-        lumi_xy = -1.0;                             /* Reseta luminancia para -1.0*/
-    }
-    glFlush ();
-}
-
-///***********************///
 /// FAZ O DISPLAY DO FRAME ATUAL DA TELA CALCULANDO ILUMINA��O
 /// E ATUALIZANDO display() PARA CADA PIXEL DEFINIDO PELO viewport
 ///***********************///
 
-void displayImage(void){
+void display(void){
 
     GLint viewport[4];
     glGetIntegerv (GL_VIEWPORT, viewport);
@@ -327,27 +312,43 @@ void displayImage(void){
     for (i = 0; i <= viewport[2]; i++){         /* viewport[2] = comprimento da tela em pixels */
         for (j = 0; j <= viewport[3]; j++){     /* viewport[3] = altura da tela em pixels */
             lumi_xy = calcularIluminacao(i, j, lf, n_esferas, n_luzPont);
-            display();
+            
+            if(lumi_xy > 0){
+                glBegin(GL_POINTS);
+                    glColor3f(lumi_xy, lumi_xy, lumi_xy);   /* Ajusta cor do pixel em escala cinza */
+                    glVertex2d(x_tela, y_tela);             /* Desenha um ponto na cor definida em (x_tela, y_tela)*/
+                glEnd();
+
+                lumi_xy = -1.0;                             /* Reseta luminancia para -1.0*/
+            }
         }
+        // somente liberamos o buffer quando TODOS os pixeis forem calculados.
+        glFlush ();
     }
+
 
     printf("Terminou display\n");
 }
 
 
-struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GLdouble kd, GLdouble ks, GLdouble nshiny){
-    GLdouble *coords_esf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GLdouble kd, GLdouble ks, GLdouble nshiny, GLfloat color_RED, GLfloat color_GREEN, GLfloat color_BLUE){
+    GLdouble* coords_esf = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     coords_esf[0] = x;
     coords_esf[1] = y;
     coords_esf[2] = z;
-
-    struct Esfera e = {coords_esf, r, kd, ks, nshiny};
+	
+	GLdouble* cor_esfera = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+	cor_esfera[0] = color_RED;
+	cor_esfera[1] = color_GREEN;
+	cor_esfera[2] = color_BLUE;
+	
+    struct Esfera e = {coords_esf, cor_esfera, r, kd, ks, nshiny};
 
     return e;
 }
 
 struct LuzPontual constructLight(GLdouble x, GLdouble y, GLdouble z, GLdouble IL_lp, GLdouble fatt){
-    GLdouble *coords_lp = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    GLdouble* coords_lp = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     coords_lp[0] = x;
     coords_lp[1] = y;
     coords_lp[2] = z;
@@ -371,9 +372,9 @@ void init(void)
 
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
 
-    esferas[0] = constructSphere(0.0, 10.0, -60.0, 3.0, 1.0, 1.0, 30);
-    esferas[1] = constructSphere(-10.0, -5.0, -50.0, 8.0, 1.0, 1.0, 30);
-    esferas[2] = constructSphere(10.0, 5.0, -40.0, 5.0, 1.0, 1.0, 30);
+    esferas[0] = constructSphere(0.0, 10.0, -60.0, 3.0, 1.0, 1.0, 30, 255.0, 255.0, 255.0);
+    esferas[1] = constructSphere(-10.0, -5.0, -50.0, 8.0, 1.0, 1.0, 30, 255.0, 255.0, 255.0);
+    esferas[2] = constructSphere(10.0, 5.0, -40.0, 5.0, 1.0, 1.0, 30,  255.0, 255.0, 255.0);
 
 
 
@@ -397,7 +398,7 @@ void init(void)
 
     /// INICIALIZANDO LOOKFROM
     // Variáveis de configuração
-    lf = (GLdouble*)malloc(sizeof(GLdouble) * 3);
+    lf = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     lf[0] = 0.0;
     lf[1] = 0.0;
     lf[2] = 10.0;
@@ -413,31 +414,31 @@ void keyboard (unsigned char key, int x, int y)
 {
     switch (key) {
         case 'n':
-            displayImage();
+            display();
             break;
         case 'w':
             lf[2] -= stepSize;
-            displayImage();
+            display();
             break;
         case 'a':
             lf[0] += stepSize;
-            displayImage();
+            display();
             break;
         case 's':
             lf[2] += stepSize;
-            displayImage();
+            display();
             break;
         case 'd':
             lf[0] -= stepSize;
-            displayImage();
+            display();
             break;
         case 'q':
             lf[1] -= stepSize;
-            displayImage();
+            display();
             break;
         case 'e':
             lf[1] += stepSize;
-            displayImage();
+            display();
             break;
 
         default:
@@ -453,7 +454,7 @@ int main(int argc, char** argv)
     glutInitWindowPosition (100, 100);
     glutCreateWindow (argv[0]);
     init ();
-    glutDisplayFunc(displayImage);
+    glutDisplayFunc(display);
     //glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
 
