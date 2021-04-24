@@ -241,6 +241,11 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
 
         GLdouble ilumAcumuladaLuzPont = 0.0;
 
+        // cores da esfera mais à frente (a que representa o pixel)
+        GLdouble RED = esferas[sphr_i].cor_esfera[0] / 255;
+        GLdouble GREEN = esferas[sphr_i].cor_esfera[1] / 255;
+        GLdouble BLUE = esferas[sphr_i].cor_esfera[2] / 255;
+
         for (int i = 0; i < n_luzes; i++){
             /// VETOR LUZ (L) = Luz - S
             GLdouble* luz = normalizarVetor(sub_arrays(luzPont[i].coords, superficie, 3), 3);
@@ -252,33 +257,39 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
                                     dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
 
             /// CÁLCULO DA ILUMINAÇÃO TOTAL
-            GLdouble LN, RO, especular = 0, difusa;
+            GLdouble LN, RO;
+            GLdouble* especular = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+            especular[0] = 0;
+            especular[1] = 0;
+            especular[2] = 0;
+            GLdouble* difusa = (GLdouble*) malloc(sizeof(GLdouble) * 3);; 
 
             LN = dot_product(luz, normal, 3);
             RO = dot_product(observador, refletido, 3);
 
-            difusa = esferas[sphr_i].kd * LN;
+            difusa[0] = RED * esferas[sphr_i].kd * LN;
+            difusa[1] = GREEN * esferas[sphr_i].kd * LN;
+            difusa[2] = BLUE * esferas[sphr_i].kd * LN;
             if(RO > 0){
-                especular = esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+                especular[0] = RED * esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+                especular[1] = GREEN * esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+                especular[2] = BLUE * esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
             }
 
-            I[0] += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
-            I[1] += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
-            I[2] += luzPont[i].fatt * luzPont[i].IL * (difusa + especular);
+            I[0] += luzPont[i].fatt * luzPont[i].IL * (difusa[0] + especular[0]);
+            I[1] += luzPont[i].fatt * luzPont[i].IL * (difusa[1] + especular[1]);
+            I[2] += luzPont[i].fatt * luzPont[i].IL * (difusa[2] + especular[2]);
             // if(ilumAcumuladaLuzPont < luzPont[i].IL){
             //     ilumAcumuladaLuzPont = luzPont[i].IL;
             // }
             // ilumAcumuladaLuzPont += luzPont[i].IL;
         }
-        // cores da esfera mais à frente (a que representa o pixel)
-        GLdouble RED = esferas[sphr_i].cor_esfera[0] / 255;
-        GLdouble GREEN = esferas[sphr_i].cor_esfera[1] / 255;
-        GLdouble BLUE = esferas[sphr_i].cor_esfera[2] / 255;
+
 
         /// REDUZIR PARA VALOR [0, 1] e depois multiplica pelo fator da cor
-        I[0] = RED * (I[0] / (2000));
-        I[1] = GREEN * (I[1] / (2000));
-        I[2] = BLUE * (I[2] / (2000));
+        I[0] = (I[0] / (2000));
+        I[1] = (I[1] / (2000));
+        I[2] = (I[2] / (2000));
 
         return I;
     } else {
