@@ -40,9 +40,8 @@ TODO:
 struct Esfera{
     GLdouble* coords;
     GLdouble* cor_esfera;    // tamanho 3: R,G,B
+    GLdouble* cor_especular; // tamanho 3: R,G,B
     GLdouble r;
-    GLdouble kd;
-    GLdouble ks;
     GLdouble nshiny;
 };
 
@@ -246,6 +245,10 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
         GLdouble GREEN = esferas[sphr_i].cor_esfera[1] / 255;
         GLdouble BLUE = esferas[sphr_i].cor_esfera[2] / 255;
 
+        GLdouble spec_RED = esferas[sphr_i].cor_especular[0] / 255;
+        GLdouble spec_GREEN = esferas[sphr_i].cor_especular[1] / 255;
+        GLdouble spec_BLUE = esferas[sphr_i].cor_especular[2] / 255;
+
         for (int i = 0; i < n_luzes; i++){
             /// VETOR LUZ (L) = Luz - S
             GLdouble* luz = normalizarVetor(sub_arrays(luzPont[i].coords, superficie, 3), 3);
@@ -267,22 +270,18 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
             LN = dot_product(luz, normal, 3);
             RO = dot_product(observador, refletido, 3);
 
-            difusa[0] = RED * esferas[sphr_i].kd * LN;
-            difusa[1] = GREEN * esferas[sphr_i].kd * LN;
-            difusa[2] = BLUE * esferas[sphr_i].kd * LN;
+            difusa[0] = RED * LN;
+            difusa[1] = GREEN * LN;
+            difusa[2] = BLUE * LN;
             if(RO > 0){
-                especular[0] = RED * esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
-                especular[1] = GREEN * esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
-                especular[2] = BLUE * esferas[sphr_i].ks * pow(RO, esferas[sphr_i].nshiny);
+                especular[0] = spec_RED * pow(RO, esferas[sphr_i].nshiny);
+                especular[1] = spec_GREEN * pow(RO, esferas[sphr_i].nshiny);
+                especular[2] = spec_BLUE * pow(RO, esferas[sphr_i].nshiny);
             }
 
             I[0] += luzPont[i].fatt * luzPont[i].IL * (difusa[0] + especular[0]);
             I[1] += luzPont[i].fatt * luzPont[i].IL * (difusa[1] + especular[1]);
             I[2] += luzPont[i].fatt * luzPont[i].IL * (difusa[2] + especular[2]);
-            // if(ilumAcumuladaLuzPont < luzPont[i].IL){
-            //     ilumAcumuladaLuzPont = luzPont[i].IL;
-            // }
-            // ilumAcumuladaLuzPont += luzPont[i].IL;
         }
 
 
@@ -359,7 +358,7 @@ void display(void){
 }
 
 
-struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GLdouble kd, GLdouble ks, GLdouble nshiny, GLdouble color_RED, GLdouble color_GREEN, GLdouble color_BLUE){
+struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble color_RED, GLdouble color_GREEN, GLdouble color_BLUE, GLdouble spec_RED, GLdouble spec_GREEN, GLdouble spec_BLUE, GLdouble r, GLdouble nshiny){
     GLdouble* coords_esf = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     coords_esf[0] = x;
     coords_esf[1] = y;
@@ -369,8 +368,13 @@ struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble r, GL
 	cor_esfera[0] = color_RED;
 	cor_esfera[1] = color_GREEN;
 	cor_esfera[2] = color_BLUE;
+
+    GLdouble* cor_especular = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+    cor_especular[0] = spec_RED;
+	cor_especular[1] = spec_GREEN;
+	cor_especular[2] = spec_BLUE;
 	
-    struct Esfera e = {coords_esf, cor_esfera, r, kd, ks, nshiny};
+    struct Esfera e = {coords_esf, cor_esfera, cor_especular, r, nshiny};
 
     return e;
 }
@@ -401,17 +405,15 @@ void init(void)
     n_esferas = 3;
 
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
-    esferas[0] = constructSphere(0.0, 10.0, -60.0, 3.0, 1.0, 1.0, 30, 255.0, 25.0, 0.0);
-    esferas[1] = constructSphere(-10.0, -5.0, -50.0, 8.0, 1.0, 1.0, 30, 25.0, 255.0, 135.0);
-    esferas[2] = constructSphere(10.0, 5.0, -40.0, 5.0, 1.0, 1.0, 30,  46.0, 0.0, 255.0);
-
+    esferas[0] = constructSphere(0.0, 10.0, -60.0,   255,25,0,   255,255,255,  4.0, 30);
+    esferas[1] = constructSphere(-10.0, -5.0, -50.0, 25,255,135, 128,255,128,  8.0, 30);
+    esferas[2] = constructSphere(10.0, 5.0, -40.0,   46,0,255,   255,0,255,  5.0, 50);
 
 
     /// INICIALIZANDO LUZ AMBIENTE
     // Variáveis de configuração
     luzAmb.Ia = 300;
     luzAmb.ka = 0.8;
-
 
     /// INICIALIZANDO LUZES PONTUAIS
     // Variáveis de configuração
@@ -420,7 +422,7 @@ void init(void)
 
     luzPont = (struct LuzPontual*) malloc(sizeof(*luzPont) * n_luzPont);
 
-    luzPont[0] = constructLight(-20.0, -10.0, -10.0, 1000, 1);
+    luzPont[0] = constructLight(-20.0, -10.0, -10.0, 1800, 1);
     luzPont[1] = constructLight(20.0, -20.0, -10.0, 600, 1);
     luzPont[2] = constructLight(0.0, 40.0, -10.0, 300, 1);
 
