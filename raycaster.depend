@@ -7,3 +7,11 @@
 	<stdbool.h>
 	<math.h>
 
+1619483378 source:c:\users\angel\documents\opengl\learning\raycaster\opengl-raycaster\main.c
+	<GL/gl.h>
+	<GL/glu.h>
+	<GL/glut.h>
+	<stdio.h>
+	<stdbool.h>
+	<math.h>
+

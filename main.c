@@ -15,10 +15,6 @@ GRUPO:  ANGELO LEITE MEDEIROS DE GOES
 *** ALGORITMO DE RAYCASTING USANDO OPENGL E BIBLIOTECA GLUT ***
 ***************************************************************
 
-TODO:
- - CÁLCULO DA ILUMINAÇÃO PARA OS 3 CANAIS DE CORES
- - (TALVEZ) CÁLCULO DINÂMICO DE fatt, POR fatt = 1/d^2, SENDO d A DISTÂNCIA ENTRE A LUZ FOCAL E A SUPERÍCIE
-
 ***************************************************************
 ***************************************************************
 
@@ -39,8 +35,8 @@ TODO:
 
 struct Esfera{
     GLdouble* coords;
-    GLdouble* cor_esfera;    // tamanho 3: R,G,B
-    GLdouble* cor_especular; // tamanho 3: R,G,B
+    GLdouble* kd;    // tamanho 3: R,G,B
+    GLdouble* ks; // tamanho 3: R,G,B
     GLdouble r;
     GLdouble nshiny;
 };
@@ -54,6 +50,10 @@ struct LuzPontual{
 struct LuzAmbiente{
     GLdouble Ia;
     GLdouble ka;
+};
+
+struct IntersectCoefs{
+    GLdouble delta, b;
 };
 
 ///***********************///
@@ -75,7 +75,8 @@ int n_esferas, n_luzPont;
 GLdouble fov = 45.0;
 GLdouble znear = 1.0;   /* Distância focal */
 GLdouble zfar = 100.0;
-GLdouble stepSize = 10.0;
+GLdouble stepSize = 5.0;
+GLint renderizarSombras = 1;    /* = 1 para renderizar sombras */
 
 ///***********************///
 /// OPERAÇÃES COM VETORES
@@ -128,6 +129,14 @@ GLdouble* add_arrays(GLdouble* v, GLdouble* u, GLint n)
     return result;
 }
 
+GLdouble euclid_dist(GLdouble* v, GLdouble* u, GLint n)
+{
+    GLdouble result = 0;
+    for (int i = 0; i < n; i++)
+        result += pow(v[i],2) + pow(u[i],2);
+    return sqrt(result);
+}
+
 ///***********************///
 /// RECEBE COORDENADAS DE TELA
 /// RETORNA COORDENADAS DE MUNDO
@@ -164,52 +173,70 @@ GLdouble* screenToWorldCoord(int x, int y){
 }
 
 ///***********************///
+/// RECEBE POSIÇÃO DO OBSERVADOR, DIREÇÃO DO RAIO NORMALIZADO E ESFERA
+/// RETORNA COEFICIENTES DO CALCULO DE INTERSECÇÃO DO RAIO COM UMA ESFERA
+///***********************///
+
+struct IntersectCoefs calcularIntersectEsfera(GLdouble* lookfrom, GLdouble* direcao_normal, struct Esfera esfera){
+
+    /// DESCOMPACTANDO COORDENADAS DE ORIGEM
+    GLdouble xo = lookfrom[0];
+    GLdouble yo = lookfrom[1];
+    GLdouble zo = lookfrom[2];
+
+    /// DIREÇÃO NORMALIZADA
+    GLdouble xd = direcao_normal[0];
+    GLdouble yd = direcao_normal[1];
+    GLdouble zd = direcao_normal[2];
+
+    /// COORDENADAS DE ESFERA
+    GLdouble xc = esfera.coords[0];
+    GLdouble yc = esfera.coords[1];
+    GLdouble zc = esfera.coords[2];
+    GLdouble r = esfera.r;
+
+    /// VALORES DO CÁLCULO DA INTERSERCÇÃO
+    GLdouble delta;
+    GLdouble a = 1.0;
+    GLdouble b = 2 * (xd * (xo - xc) + yd * (yo - yc) + zd * (zo - zc));
+    GLdouble c = (xo - xc)*(xo - xc) + (yo - yc)*(yo - yc) + (zo - zc)*(zo - zc) - r*r;
+
+    delta = b*b - 4*a*c;
+
+    struct IntersectCoefs coefs = {delta, b};
+
+    return coefs;
+}
+
+///***********************///
 /// CHECA POR INTERSECÇÃO DO RAIO CASTADO ATRAVES DO PIXEL EM (x,y) COM OBJETOS
 /// CALCULA E RETORNA ILUMINAÇÃO TOTAL NAQUELE PIXEL, OU -1.0, CASO NÃO HAJA INTERSECÇÃO
 ///***********************///
 
-GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, int n_luzes){
-
-    /// DESCOMPACTANDO COORDENADAS DE ORIGEM E DE ESFERA
-    GLdouble xo = lookfrom[0];
-    GLdouble yo = lookfrom[1];
-    GLdouble zo = lookfrom[2];
+GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom){
 
     /// OBTENDO COORDENADAS DO VETOR DE DIREÇÃO NORMALIZADO
     GLdouble* direcao = screenToWorldCoord(x, y);
     GLdouble* direcao_normal = normalizarVetor(direcao, 3);
 
-    GLdouble xd = direcao_normal[0];
-    GLdouble yd = direcao_normal[1];
-    GLdouble zd = direcao_normal[2];
-
-    double closest_intersection = zfar;
+    GLdouble closest_intersection = zfar;
     int sphr_i = 0;
-    // printf("closest intersect: %lf \n", closest_intersection);
+
     for (int i = 0; i < n_esferas; i++){
-        GLdouble xc = esferas[i].coords[0];
-        GLdouble yc = esferas[i].coords[1];
-        GLdouble zc = esferas[i].coords[2];
 
-        GLdouble r = esferas[i].r;
-
-        /// VALORES DO CÁLCULO DA INTERSERCÇÃO
-        double delta;
-        double a = 1.0;
-        double b = 2 * (xd * (xo - xc) + yd * (yo - yc) + zd * (zo - zc));
-        double c = (xo - xc)*(xo - xc) + (yo - yc)*(yo - yc) + (zo - zc)*(zo - zc) - r*r;
-
-        delta = b*b - 4*a*c;
+        // Calcula o valor de 'delta' e 'b' da intersecção raio-esfera
+        struct IntersectCoefs coefs = calcularIntersectEsfera(lookfrom, direcao_normal, esferas[i]);
 
         // Se (delta > 0) existe raízes para equação, logo, há intersecção
-        if(delta >= 0){
+        if(coefs.delta >= 0){
 
-            double t1, t2, t;
-            t1 = (-b + sqrt(delta))/(2*a);
-            t2 = (-b - sqrt(delta))/(2*a);
+            GLdouble t1, t2, t;
+            t1 = (-coefs.b + sqrt(coefs.delta))/(2*1.0);
+            t2 = (-coefs.b - sqrt(coefs.delta))/(2*1.0);
 
             // Escolhe a menor raiz (mais próxima do observador)
             t = (fabs(t1) < fabs(t2)) ? t1 : t2;
+
             // Verifica se essa raiz é a mais próxima até então, se for armazena ela
             if (fabs(t) < fabs(closest_intersection)){
                 closest_intersection = t;
@@ -218,10 +245,27 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
         }
     }
 
+    // Caso haja intersecção dentro do frustum
     if (fabs(closest_intersection) < zfar){
-        GLdouble ambiente, new_fatt;
+        GLdouble ambiente;
         ambiente = luzAmb.Ia * luzAmb.ka;
-        new_fatt = 1.0 / pow(closest_intersection, 2);
+
+        /// Três canais: R, G e B
+        GLdouble* I = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+        I[0] = ambiente;
+        I[1] = ambiente;
+        I[2] = ambiente;
+
+        /// Cores da esfera mais à frente (a que representa o pixel)
+        GLdouble kdr = esferas[sphr_i].kd[0];
+        GLdouble kdg = esferas[sphr_i].kd[1];
+        GLdouble kdb = esferas[sphr_i].kd[2];
+
+        GLdouble ksr = esferas[sphr_i].ks[0];
+        GLdouble ksg = esferas[sphr_i].ks[1];
+        GLdouble ksb = esferas[sphr_i].ks[2];
+
+        GLdouble ilumAcumuladaLuzPont = 0.0;
 
         /// VETOR SUPERFICIE (S) = lookfrom + distance * direção_normalizada
         GLdouble* superficie = add_arrays(lookfrom, cnt_product(direcao_normal, closest_intersection, 3), 3);
@@ -232,26 +276,46 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
         /// VETOR OBSERVADOR (O) = lookfrom - S
         GLdouble* observador = normalizarVetor(sub_arrays(lookfrom, superficie, 3), 3);
 
-        // três canais: R, G e B
-        GLdouble* I = (GLdouble*) malloc(sizeof(GLdouble) * 3);
-        I[0] = ambiente;
-        I[1] = ambiente;
-        I[2] = ambiente;
 
-        GLdouble ilumAcumuladaLuzPont = 0.0;
+        for (int i = 0; i < n_luzPont; i++){
 
-        // cores da esfera mais à frente (a que representa o pixel)
-        GLdouble RED = esferas[sphr_i].cor_esfera[0] / 255;
-        GLdouble GREEN = esferas[sphr_i].cor_esfera[1] / 255;
-        GLdouble BLUE = esferas[sphr_i].cor_esfera[2] / 255;
 
-        GLdouble spec_RED = esferas[sphr_i].cor_especular[0] / 255;
-        GLdouble spec_GREEN = esferas[sphr_i].cor_especular[1] / 255;
-        GLdouble spec_BLUE = esferas[sphr_i].cor_especular[2] / 255;
-
-        for (int i = 0; i < n_luzes; i++){
             /// VETOR LUZ (L) = Luz - S
             GLdouble* luz = normalizarVetor(sub_arrays(luzPont[i].coords, superficie, 3), 3);
+
+            /// PRODUTO NOTÁVEL LUZ . NORMAL
+            GLdouble LN = dot_product(luz, normal, 3);
+
+            // Checa se deve ou não renderizar sombras
+            if(renderizarSombras == 1){
+                // Checa se há sombra na direção da luz
+                // Caso haja retorne apenas a iluminação ambiente
+                GLint haSombra = -1;     //Flag 'haSombra'
+                for(int j = 0; j < n_esferas; j++){
+                    struct IntersectCoefs shadow_coefs = calcularIntersectEsfera(superficie, luz, esferas[j]);
+                    if(shadow_coefs.delta >= 0 && sphr_i != j){
+
+                        GLdouble distObjetoLuz = euclid_dist(esferas[sphr_i].coords, luzPont[i].coords, 3);
+                        GLdouble distObstaculoLuz = euclid_dist(esferas[j].coords, luzPont[i].coords, 3);
+
+                        // Checa se a distancia euclidiana obstaculo-luz é menor que objeto atual-luz
+                        // Só aplica sombra se o obstaculo estiver entre objeto e luz, ou seja, está entre eles
+                        // E também se o vetor normal a superficie e luz apontarem no mesmo sentido
+
+                        if(distObstaculoLuz < distObjetoLuz && LN > 0)
+                        {
+                            I[0] = ambiente;
+                            I[1] = ambiente;
+                            I[2] = ambiente;
+
+                            haSombra = 1;
+                            break;
+                        }
+                    }
+                }
+                if(haSombra == 1)
+                    break;
+            }
 
             /// VETOR REFLETIDO (R) = 2N(N.L) - L
             GLdouble* refletido = sub_arrays(
@@ -259,24 +323,25 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
                                     cnt_product(normal,
                                     dot_product(normal, luz, 3), 3), 2, 3), luz, 3);
 
+            /// PRODUTO NOTÁVEL REFLETIDO . OBSERVADOR
+            GLdouble RO = dot_product(observador, refletido, 3);
+
             /// CÁLCULO DA ILUMINAÇÃO TOTAL
-            GLdouble LN, RO;
+
+            GLdouble* difusa = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+            difusa[0] = kdr * LN;
+            difusa[1] = kdg * LN;
+            difusa[2] = kdb * LN;
+
             GLdouble* especular = (GLdouble*) malloc(sizeof(GLdouble) * 3);
             especular[0] = 0;
             especular[1] = 0;
             especular[2] = 0;
-            GLdouble* difusa = (GLdouble*) malloc(sizeof(GLdouble) * 3);; 
 
-            LN = dot_product(luz, normal, 3);
-            RO = dot_product(observador, refletido, 3);
-
-            difusa[0] = RED * LN;
-            difusa[1] = GREEN * LN;
-            difusa[2] = BLUE * LN;
             if(RO > 0){
-                especular[0] = spec_RED * pow(RO, esferas[sphr_i].nshiny);
-                especular[1] = spec_GREEN * pow(RO, esferas[sphr_i].nshiny);
-                especular[2] = spec_BLUE * pow(RO, esferas[sphr_i].nshiny);
+                especular[0] = ksr * pow(RO, esferas[sphr_i].nshiny);
+                especular[1] = ksg * pow(RO, esferas[sphr_i].nshiny);
+                especular[2] = ksb * pow(RO, esferas[sphr_i].nshiny);
             }
 
             I[0] += luzPont[i].fatt * luzPont[i].IL * (difusa[0] + especular[0]);
@@ -296,7 +361,7 @@ GLdouble* calcularIluminacao(int x, int y, GLdouble* lookfrom, int n_esferas, in
         I[0] = -1.0;
         I[1] = -1.0;
         I[2] = -1.0;
-        
+
         return I;
     }
 }
@@ -316,7 +381,6 @@ void reshape (int w, int h)
     glLoadIdentity();
 
     gluLookAt (0.0, 0.0, znear, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0);
-    //display(n_esferas, n_luzPont);
 }
 
 ///***********************///
@@ -336,48 +400,56 @@ void display(void){
     int i, j;
     for (i = 0; i <= viewport[2]; i++){         /* viewport[2] = comprimento da tela em pixels */
         for (j = 0; j <= viewport[3]; j++){     /* viewport[3] = altura da tela em pixels */
-            lumi_xy = calcularIluminacao(i, j, lf, n_esferas, n_luzPont);
-            
+            lumi_xy = calcularIluminacao(i, j, lf);
+
             if(lumi_xy[0] > 0){
                 glBegin(GL_POINTS);
                     glColor3d(lumi_xy[0], lumi_xy[1], lumi_xy[2]);   /* Ajusta cor do pixel em escala cinza */
                     glVertex2d(x_tela, y_tela);             /* Desenha um ponto na cor definida em (x_tela, y_tela)*/
                 glEnd();
-                
+
                 /* Reseta luminancia para -1.0*/
-                lumi_xy[0] = -1.0;                             
-                lumi_xy[1] = -1.0;                             
-                lumi_xy[2] = -1.0;                             
+                lumi_xy[0] = -1.0;
+                lumi_xy[1] = -1.0;
+                lumi_xy[2] = -1.0;
             }
         }
-        // somente liberamos o buffer quando TODOS os pixeis forem calculados.
+        // Somente liberamos o buffer quando TODOS os pixeis forem calculados.
         glFlush ();
     }
 
     printf("Terminou display\n");
 }
 
+///***********************///
+/// CONSTRUTOR DE ESFERAS
+///***********************///
 
-struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble color_RED, GLdouble color_GREEN, GLdouble color_BLUE, GLdouble spec_RED, GLdouble spec_GREEN, GLdouble spec_BLUE, GLdouble r, GLdouble nshiny){
+struct Esfera constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble kdr, GLdouble kdg, GLdouble kdb, GLdouble ksr, GLdouble ksg, GLdouble ksb, GLdouble r, GLdouble nshiny){
     GLdouble* coords_esf = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     coords_esf[0] = x;
     coords_esf[1] = y;
     coords_esf[2] = z;
-	
-	GLdouble* cor_esfera = (GLdouble*) malloc(sizeof(GLdouble) * 3);
-	cor_esfera[0] = color_RED;
-	cor_esfera[1] = color_GREEN;
-	cor_esfera[2] = color_BLUE;
 
-    GLdouble* cor_especular = (GLdouble*) malloc(sizeof(GLdouble) * 3);
-    cor_especular[0] = spec_RED;
-	cor_especular[1] = spec_GREEN;
-	cor_especular[2] = spec_BLUE;
-	
-    struct Esfera e = {coords_esf, cor_esfera, cor_especular, r, nshiny};
+	GLdouble* kd = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+	kd[0] = kdr;
+	kd[1] = kdg;
+	kd[2] = kdb;
+
+    GLdouble* ks = (GLdouble*) malloc(sizeof(GLdouble) * 3);
+    ks[0] = ksr;
+	ks[1] = ksg;
+	ks[2] = ksb;
+
+    struct Esfera e = {coords_esf, kd, ks, r, nshiny};
 
     return e;
 }
+
+///***********************///
+/// CONSTRUTOR DE LUZ PONTUAL
+///***********************///
+
 
 struct LuzPontual constructLight(GLdouble x, GLdouble y, GLdouble z, GLdouble IL_lp, GLdouble fatt){
     GLdouble* coords_lp = (GLdouble*) malloc(sizeof(GLdouble) * 3);
@@ -396,28 +468,51 @@ struct LuzPontual constructLight(GLdouble x, GLdouble y, GLdouble z, GLdouble IL
 ///***********************///
 
 void init(void)
-{   
-    // especificando qual cor é que glClear(GL_COLOR_BUFFER_BIT) vai utilizar
+{
+    // Especificando qual cor é que glClear(GL_COLOR_BUFFER_BIT) vai utilizar
     glClearColor (0.0, 0.0, 0.0, 0.0);
-    
+
     /// INICIALIZANDO ESFERAS
-    // Variáveis de configuração
+    // params: constructSphere(GLdouble x, GLdouble y, GLdouble z, GLdouble kdr, GLdouble kdg, GLdouble kdb,
+    //                         GLdouble ksr, GLdouble ksg, GLdouble ksb, GLdouble r, GLdouble nshiny)
+
+    /// CENA 1
+
     n_esferas = 3;
-
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
-    esferas[0] = constructSphere(0.0, 10.0, -60.0,   255,25,0,   255,255,255,  4.0, 30);
-    esferas[1] = constructSphere(-10.0, -5.0, -50.0, 25,255,135, 128,255,128,  8.0, 30);
-    esferas[2] = constructSphere(10.0, 5.0, -40.0,   46,0,255,   255,0,255,  5.0, 50);
+    esferas[0] = constructSphere(0.0, 10.0, -60.0,   1.0,0.0,0.0,   1.0,1.0,1.0,  4.0, 10);     // Vermelho
+    esferas[1] = constructSphere(-10.0, 0.0, -50.0,  0.0,1.0,0.0,   1.0,1.0,1.0,  8.0, 30);     // Verde
+    esferas[2] = constructSphere(10.0, 10.0, -40.0,   0.0,0.0,1.0,   1.0,1.0,1.0,  5.0, 50);     // Azul
 
+
+    /// CENA 2
+    /*
+    n_esferas = 4;
+    esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
+    esferas[0] = constructSphere(5.0, 5.0, -30.0,   1.0,0.0,0.0,   1.0,1.0,1.0,  3.0, 10);     // Vermelho
+    esferas[1] = constructSphere(-5.0, 5.0, -20.0,  0.0,1.0,0.0,   1.0,1.0,1.0,  3.0, 30);     // Verde
+    esferas[2] = constructSphere(-5.0, -5.0, -50.0,   0.0,0.0,1.0,   1.0,1.0,1.0,  3.0, 50);   // Azul
+    esferas[3] = constructSphere(-3.0, 3.0, -30.0,  1.0,1.0,0.0,   1.0,1.0,1.0,  5.0, 80);     // Amarelo
+    */
+
+    /// CENA 3 - Ilusão de perspectiva
+    /*
+    n_esferas = 6;
+    esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
+    renderizarSombras = 0;
+    esferas[0] = constructSphere(-4.0, 8.0, -30.0,   1.0,0.0,0.0,   1.0,1.0,1.0,  3.0, 30);     // Vermelho
+    esferas[1] = constructSphere(4.0, 8.0, -30.0,  0.0,1.0,0.0,   1.0,0.0,0.0,  3.0, 30);       // Verde
+    esferas[2] = constructSphere(0.0, 0.0, -60.0,   0.0,0.0,1.0,   1.0,1.0,1.0,  5.0, 30);     // Azul
+    esferas[3] = constructSphere(-8.0, 0.0, -30.0,  1.0,1.0,0.0,   1.0,1.0,1.0,  3.0, 30);     // Amarelo
+    esferas[4] = constructSphere(8.0, 0.0, -30.0,  1.0,0.0,1.0,   1.0,1.0,1.0,  3.0, 30);      // Rosa
+    esferas[5] = constructSphere(0.0, -8.0, -30.0,   0.0,1.0,1.0,   1.0,1.0,1.0,  3.0, 30);     // Ciano
+    */
 
     /// INICIALIZANDO LUZ AMBIENTE
-    // Variáveis de configuração
     luzAmb.Ia = 300;
     luzAmb.ka = 0.8;
 
     /// INICIALIZANDO LUZES PONTUAIS
-    // Variáveis de configuração
-
     n_luzPont = 3;
 
     luzPont = (struct LuzPontual*) malloc(sizeof(*luzPont) * n_luzPont);
@@ -426,16 +521,13 @@ void init(void)
     luzPont[1] = constructLight(20.0, -20.0, -10.0, 600, 1);
     luzPont[2] = constructLight(0.0, 40.0, -10.0, 300, 1);
 
-
     /// INICIALIZANDO LOOKFROM
-    // Variáveis de configuração
     lf = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     lf[0] = 0.0;
     lf[1] = 0.0;
     lf[2] = 10.0;
 
-    // INICIALIZANDO O VETOR DE LUMINÂNCIAS
-    // Variáveis de configuração
+    /// INICIALIZANDO O VETOR DE LUMINÂNCIAS
     lumi_xy = (GLdouble*) malloc(sizeof(GLdouble) * 3);
     lumi_xy[0] = -1.0;
     lumi_xy[1] = -1.0;
@@ -445,9 +537,10 @@ void init(void)
     glPointSize(1);
 }
 
-///***********************///
-/// MAIN
-///***********************///
+///***********************************///
+/// COMANDOS DE MOVIMENTO VIA TECLADO
+///***********************************///
+
 void keyboard (unsigned char key, int x, int y)
 {
     switch (key) {
@@ -484,6 +577,10 @@ void keyboard (unsigned char key, int x, int y)
     }
 }
 
+///***********************///
+/// MAIN
+///***********************///
+
 int main(int argc, char** argv)
 {
     glutInit(&argc, argv);
@@ -493,7 +590,6 @@ int main(int argc, char** argv)
     glutCreateWindow (argv[0]);
     init ();
     glutDisplayFunc(display);
-    //glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
 
     glutMainLoop();
