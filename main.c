@@ -133,7 +133,7 @@ GLdouble euclid_dist(GLdouble* v, GLdouble* u, GLint n)
 {
     GLdouble result = 0;
     for (int i = 0; i < n; i++)
-        result += pow(v[i],2) + pow(u[i],2);
+        result += pow((v[i] - u[i]),2);
     return sqrt(result);
 }
 
@@ -499,7 +499,6 @@ void init(void)
     /*
     n_esferas = 6;
     esferas = (struct Esfera*) malloc(sizeof(*esferas) * n_esferas);
-    renderizarSombras = 0;
     esferas[0] = constructSphere(-4.0, 8.0, -30.0,   1.0,0.0,0.0,   1.0,1.0,1.0,  3.0, 30);     // Vermelho
     esferas[1] = constructSphere(4.0, 8.0, -30.0,  0.0,1.0,0.0,   1.0,0.0,0.0,  3.0, 30);       // Verde
     esferas[2] = constructSphere(0.0, 0.0, -60.0,   0.0,0.0,1.0,   1.0,1.0,1.0,  5.0, 30);     // Azul
